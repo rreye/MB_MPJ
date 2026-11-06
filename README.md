@@ -17,53 +17,38 @@ and adds optional CSV output.
 - Optional CSV output, one file per benchmark.
 - Unit tests for parsing, sizing, CSV and IMB-P2P logic; no MPI runtime needed.
 
-## Requirements
+## Using MB_MPJ
+
+MB_MPJ is distributed as a prebuilt `mbmpj.jar` in the GitHub releases. You do
+not need Maven or the source code to run the benchmarks.
+
+1. Download `mbmpj.jar` from the latest release:
+   <https://github.com/rreye/MB_MPJ/releases/latest>.
+2. Install a mpiJava implementation. The examples below use FastMPJ 1.0.7, but
+   any compatible implementation, such as MPJ Express, can be used.
+3. Launch a benchmark with the implementation's launcher.
+
+The jar does not bundle the mpiJava implementation. It is compiled against the
+mpiJava API and uses the FastMPJ or MPJ Express classes already installed on
+the system.
+
+Runtime requirements:
 
 | Component | Version |
 |---|---|
-| JDK | 11 or newer (the jar targets Java 8 bytecode) |
-| Maven | 3.6 or newer |
-| mpiJava implementation | FastMPJ 1.0.7 by default; MPJ Express or another mpiJava API can be used |
+| JDK | 8 or newer |
+| mpiJava implementation | FastMPJ 1.0.7, MPJ Express, or another compatible mpiJava API |
 
-The POM declares the mpiJava API as a `provided` dependency. To use another
-implementation, override the coordinates in `pom.xml`:
-
-```xml
-<mpj.groupId>org.fastmpj</mpj.groupId>
-<mpj.artifactId>mpj</mpj.artifactId>
-<mpj.version>1.0.7</mpj.version>
-```
-
-The current build is tested with FastMPJ 1.0.7 on Linux.
-
-## Build and test
-
-```bash
-mvn clean package    # -> target/mbmpj.jar
-mvn test             # unit tests; no MPI runtime required
-```
-
-The repository contains the Java sources, the Maven build, the documentation
-and the license files. The upstream IMB C/C++ sources and the local development
-scripts are not included.
-
-### Repository layout
-
-| Path | Contents |
-|---|---|
-| `src/main/java/MB_MPJ/` | Shared framework (`MicroBench`, CSV, `LatencyBench`) |
-| `src/main/java/MB_MPJ/mpi1/` | IMB-MPI1 benchmarks |
-| `src/main/java/MB_MPJ/p2p/` | IMB-P2P benchmarks |
-| `src/test/java/` | Unit tests for parsing, sizing, CSV and IMB-P2P logic |
-| `docs/IMB_BENCHMARKS.md` | IMB coverage matrix and implementation notes |
+The next section shows how to launch a benchmark.
 
 ## Running benchmarks
 
-The examples below use FastMPJ. With another mpiJava implementation use its
-launcher and classpath conventions.
+The examples use FastMPJ. With another mpiJava implementation, use its launcher
+and classpath conventions. `MBMPJ_JAR` is the path to the downloaded release jar
+(or to `target/mbmpj.jar` if you built from source):
 
 ```bash
-export MBMPJ_HOME=/path/to/MB_MPJ
+export MBMPJ_JAR=/path/to/mbmpj.jar
 ```
 
 FastMPJ needs a machines file listing the hosts, for example:
@@ -73,19 +58,11 @@ compute-0-0.local
 compute-0-1.local
 ```
 
-Run a benchmark with the jar:
+Run a benchmark:
 
 ```bash
 fmpjrun -np 2 -hostfile machines \
-  -cp "$MBMPJ_HOME/target/mbmpj.jar" \
-  -class MB_MPJ.mpi1.PingPong
-```
-
-or directly from the compiled classes:
-
-```bash
-fmpjrun -np 2 -hostfile machines \
-  -cp "$MBMPJ_HOME/target/classes" \
+  -cp "$MBMPJ_JAR" \
   -class MB_MPJ.mpi1.PingPong
 ```
 
@@ -93,14 +70,14 @@ Show every option of a benchmark:
 
 ```bash
 fmpjrun -np 2 -hostfile machines \
-  -cp "$MBMPJ_HOME/target/mbmpj.jar" \
+  -cp "$MBMPJ_JAR" \
   -class MB_MPJ.mpi1.PingPong -help
 ```
 
 List the available benchmarks:
 
 ```bash
-fmpjrun -np 2 -cp "$MBMPJ_HOME/target/mbmpj.jar" \
+fmpjrun -np 2 -cp "$MBMPJ_JAR" \
   -class MB_MPJ.mpi1.PingPong -list
 ```
 
@@ -257,7 +234,7 @@ size_bytes,iteration,latency_us
 ```
 
 ```bash
-fmpjrun -np 2 -cp "$MBMPJ_HOME/target/mbmpj.jar" \
+fmpjrun -np 2 -cp "$MBMPJ_JAR" \
   -class MB_MPJ.LatencyBench -csv latency.csv
 ```
 
@@ -268,7 +245,8 @@ box-plot charts with external tools.
 
 Some FastMPJ installations ship `lib/mpj-test.jar` with old `MB_MPJ` classes.
 FastMPJ places that jar before the `-cp` argument, so remove or rename it when
-running the Maven-built jar; otherwise the stale benchmark code is loaded.
+running the release jar (or a Maven-built jar); otherwise the stale benchmark
+code is loaded.
 
 ## IMB coverage
 
@@ -288,6 +266,63 @@ collectives), IMB-RMA and IMB-EXT (one-sided), IMB-IO (MPI-IO), IMB-MPI4
 
 See [`docs/IMB_BENCHMARKS.md`](docs/IMB_BENCHMARKS.md) for the full coverage
 matrix, the per-suite inventory and the implementation notes.
+
+## Building from source
+
+Building is only needed if you want to modify MB_MPJ or produce your own jar.
+The prebuilt release jar is enough to run the benchmarks.
+
+Build requirements:
+
+| Component | Version |
+|---|---|
+| JDK | 11 or newer (the jar targets Java 8 bytecode) |
+| Maven | 3.6 or newer |
+| mpiJava implementation | FastMPJ 1.0.7 by default; MPJ Express or another mpiJava API can be used |
+
+The POM declares the mpiJava API as a `provided` dependency. FastMPJ and MPJ
+Express are not in Maven Central, so Maven needs the implementation jar
+installed locally (or available from a repository you configure). For example,
+with FastMPJ:
+
+```bash
+mvn install:install-file \
+  -Dfile="$FMPJ_HOME/lib/mpj.jar" \
+  -DgroupId=org.fastmpj -DartifactId=mpj -Dversion=1.0.7 \
+  -Dpackaging=jar
+```
+
+To use another implementation, override the coordinates in `pom.xml`:
+
+```xml
+<mpj.groupId>org.fastmpj</mpj.groupId>
+<mpj.artifactId>mpj</mpj.artifactId>
+<mpj.version>1.0.7</mpj.version>
+```
+
+Then build and test:
+
+```bash
+mvn clean package    # -> target/mbmpj.jar
+mvn test             # unit tests; no MPI runtime required
+```
+
+The current build is tested with FastMPJ 1.0.7 on Linux. You can also launch a
+benchmark directly from `target/classes` after `mvn compile`.
+
+The repository contains the Java sources, the Maven build, the documentation
+and the license files. The upstream IMB C/C++ sources and the local development
+scripts are not included.
+
+### Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/main/java/MB_MPJ/` | Shared framework (`MicroBench`, CSV, `LatencyBench`) |
+| `src/main/java/MB_MPJ/mpi1/` | IMB-MPI1 benchmarks |
+| `src/main/java/MB_MPJ/p2p/` | IMB-P2P benchmarks |
+| `src/test/java/` | Unit tests for parsing, sizing, CSV and IMB-P2P logic |
+| `docs/IMB_BENCHMARKS.md` | IMB coverage matrix and implementation notes |
 
 ## License
 
