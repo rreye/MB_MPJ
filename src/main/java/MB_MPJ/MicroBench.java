@@ -289,9 +289,15 @@ public abstract class MicroBench
 	        	        B = MicroBench.createBuffer(this.datatype, recvCount);
 			}
 
+			/*
+			 * MPJ Express' tree-based Gather dereferences recvbuf on every
+			 * rank, even when rank != root, so allocate the full timing
+			 * array on all ranks. FastMPJ only uses it on the root.
+			 */
+			times = new double[this.nprocess];
+
                 	if(this.rank==0)
 			{
-				times = new double[this.nprocess];
                         	this.printHeader();
 			}
 
