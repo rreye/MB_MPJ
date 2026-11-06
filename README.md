@@ -1,250 +1,302 @@
-Message-Passing in Java (MPJ) Benchmarks Suite
-----------------------------------------------
+# MB_MPJ
 
-The code included in this microbenchmark suite is an independent Java
-reimplementation of the benchmark suite provided by Intel(R) MPI Benchmarks:
-https://github.com/intel/mpi-benchmarks
+**Message-Passing in Java (MPJ) Benchmarks Suite**
 
-QUICK START GUIDE:
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-MB_MPJ requires an implementation of the mpiJava API. The examples in this
-README use FastMPJ; other implementations such as MPJ Express can be used by
-adapting the Maven dependency and the launch command.
+MB_MPJ is an independent Java reimplementation of the benchmark suite provided
+by [Intel(R) MPI Benchmarks](https://github.com/intel/mpi-benchmarks), written
+against the mpiJava API. It covers the IMB-MPI1 and IMB-P2P benchmarks that can
+be expressed with MPI-1.2/1.3, keeps the IMB command-line names and defaults,
+and adds optional CSV output.
 
+- 21 IMB-MPI1 benchmarks, 8 IMB-P2P benchmarks and `LatencyBench`.
+- Uses only MPI-1.2/1.3 features exposed by the mpiJava API.
+- One standalone class with a `main` per benchmark.
+- IMB-compatible options (`-iter`, `-msglog`, `-warm_up`, `-window_size`, ...).
+- Optional CSV output, one file per benchmark.
+- Unit tests for parsing, sizing, CSV and IMB-P2P logic; no MPI runtime needed.
 
-APPENDIX 1: BUILDING MB_MPJ
+## Requirements
 
-1. Requirements:
+| Component | Version |
+|---|---|
+| JDK | 11 or newer (the jar targets Java 8 bytecode) |
+| Maven | 3.6 or newer |
+| mpiJava implementation | FastMPJ 1.0.7 by default; MPJ Express or another mpiJava API can be used |
 
-   - JDK 11 or newer.
-   - Maven 3.6 or newer.
-   - An implementation of the mpiJava API (for example FastMPJ or MPJ Express).
-     The POM defaults to FastMPJ 1.0.7 through the `mpj.groupId`,
-     `mpj.artifactId` and `mpj.version` properties; override them for another
-     implementation.
+The POM declares the mpiJava API as a `provided` dependency. To use another
+implementation, override the coordinates in `pom.xml`:
 
-The current build has been tested with FastMPJ 1.0.7 on Linux.
+```xml
+<mpj.groupId>org.fastmpj</mpj.groupId>
+<mpj.artifactId>mpj</mpj.artifactId>
+<mpj.version>1.0.7</mpj.version>
+```
 
-This repository contains the Java sources, Maven build, documentation and
-license files. The upstream IMB C/C++ sources and local development scripts are
-not included.
+The current build is tested with FastMPJ 1.0.7 on Linux.
 
-2. Build the benchmark suite:
+## Build and test
 
--bash-3.2$ mvn clean package
+```bash
+mvn clean package    # -> target/mbmpj.jar
+mvn test             # unit tests; no MPI runtime required
+```
 
-The jar is created at target/mbmpj.jar.
+The repository contains the Java sources, the Maven build, the documentation
+and the license files. The upstream IMB C/C++ sources and the local development
+scripts are not included.
 
-Optionally, `mvn test` runs the unit tests (option parsing, size and iteration
-sweep, CSV formatting, IMB-P2P generator and stencil grids). They do not need
-an MPI runtime.
+### Repository layout
 
-3. Set MBMPJ_HOME to the project root:
+| Path | Contents |
+|---|---|
+| `src/main/java/MB_MPJ/` | Shared framework (`MicroBench`, CSV, `LatencyBench`) |
+| `src/main/java/MB_MPJ/mpi1/` | IMB-MPI1 benchmarks |
+| `src/main/java/MB_MPJ/p2p/` | IMB-P2P benchmarks |
+| `src/test/java/` | Unit tests for parsing, sizing, CSV and IMB-P2P logic |
+| `docs/IMB_BENCHMARKS.md` | IMB coverage matrix and implementation notes |
 
--bash-3.2$ export MBMPJ_HOME=/path/to/MB_MPJ
+## Running benchmarks
 
+The examples below use FastMPJ. With another mpiJava implementation use its
+launcher and classpath conventions.
 
-APPENDIX 2: RUNNING MB_MPJ BENCHMARKS
+```bash
+export MBMPJ_HOME=/path/to/MB_MPJ
+```
 
-The examples below assume FastMPJ. With another mpiJava implementation, use
-its launcher and classpath conventions.
+FastMPJ needs a machines file listing the hosts, for example:
 
-1. Define the machines file needed to run the microbenchmarks with your
-mpiJava implementation. For example, with FastMPJ the "machines" file could
-be:
-        compute-0-0.local
-        compute-0-1.local
+```text
+compute-0-0.local
+compute-0-1.local
+```
 
-2. Use the appropriate command to launch parallel programs with your mpiJava
-implementation and run the desired benchmark. For example, with FastMPJ:
+Run a benchmark with the jar:
 
--bash-3.2$ fmpjrun -np 2 -hostfile machines -cp $MBMPJ_HOME/target/mbmpj.jar -class MB_MPJ.mpi1.PingPong
+```bash
+fmpjrun -np 2 -hostfile machines \
+  -cp "$MBMPJ_HOME/target/mbmpj.jar" \
+  -class MB_MPJ.mpi1.PingPong
+```
 
-Or also:
+or directly from the compiled classes:
 
--bash-3.2$ fmpjrun -np 2 -hostfile machines -cp $MBMPJ_HOME/target/classes -class MB_MPJ.mpi1.PingPong
+```bash
+fmpjrun -np 2 -hostfile machines \
+  -cp "$MBMPJ_HOME/target/classes" \
+  -class MB_MPJ.mpi1.PingPong
+```
 
-It will run the IMB-MPI1 PingPong benchmark with 2 processes.
+Show every option of a benchmark:
 
-IMB-P2P benchmarks live in their own package and use every process. The
-PingPong/PingPing pair requires an even number of processes; other P2P
-benchmarks have their own rank requirements:
+```bash
+fmpjrun -np 2 -hostfile machines \
+  -cp "$MBMPJ_HOME/target/mbmpj.jar" \
+  -class MB_MPJ.mpi1.PingPong -help
+```
 
--bash-3.2$ fmpjrun -np 4 -hostfile machines -cp $MBMPJ_HOME/target/mbmpj.jar -class MB_MPJ.p2p.PingPong
+List the available benchmarks:
 
-3. To see all available options run any benchmark with -help parameter:
+```bash
+fmpjrun -np 2 -cp "$MBMPJ_HOME/target/mbmpj.jar" \
+  -class MB_MPJ.mpi1.PingPong -list
+```
 
--bash-3.2$ fmpjrun -np 2 -hostfile machines -cp $MBMPJ_HOME/target/mbmpj.jar -class MB_MPJ.mpi1.PingPong -help
+## Rank requirements
 
-The main options use the IMB names and defaults: -iter, -msgsz/-msgsize,
--msglog, -warm_up and -window_size. The old -s/-e/-i/-o forms remain as
-aliases; -i/-o map to the first and second values of -iter, and -o is in MiB.
-IMB-P2P benchmarks also accept -msgwr and -msgrd (both on by default) to touch
-the send/receive buffer cache lines, and -pause (microseconds between samples,
-default 100000). IMB-MPI1 benchmarks accept -mem (GiB per
-process, default 1.0), -time (seconds per message size, default 10.0), -sync
-(barrier after each collective iteration, on by default) and -root_shift
-(rotate the root of rooted collectives, off by default). The -off_cache option
-is not implemented; passing it is rejected as an unknown option. All
-benchmarks accept -csv [file] to write their result table to a CSV file (see
-Appendix 4).
+| Benchmark family | Required processes |
+|---|---|
+| IMB-MPI1 collectives (`Allgather`, `Bcast`, `Reduce`, ...) | No explicit constraint |
+| `MB_MPJ.mpi1.PingPong` / `PingPing` (and `AnySource`) | At least 2; only ranks `0` and `n-1` are active |
+| `MB_MPJ.mpi1.Exchange`, `Sendrecv` | No explicit constraint (use 2 or more for meaningful timings) |
+| `MB_MPJ.mpi1.Uniband`, `Biband` | Even number, at least 2; pairs `r <-> r + n/2` |
+| `MB_MPJ.p2p.PingPong` / `PingPing` | Even number, at least 2; pairs `r <-> (r + n/2) % n` |
+| `MB_MPJ.p2p.Unirandom`, `Birandom`, `Corandom` | At least 2, any count |
+| `MB_MPJ.p2p.SendRecv_Replace` | At least 2, any count |
+| `MB_MPJ.p2p.Stencil2D` | A count that factors into a periodic 2D grid (4, 6, 8, 9, 10, ...) |
+| `MB_MPJ.p2p.Stencil3D` | A count that factors into a periodic 3D grid (8, 12, 16, 18, ...) |
+| `MB_MPJ.LatencyBench` | Exactly 2 |
 
+If the count is not valid, rank 0 prints an invalid-process message and the
+program exits with status 0.
 
-APPENDIX 3: AVAILABLE BENCHMARKS NAMES
+## Benchmarks
 
-MB_MPJ mirrors the IMB suite layout: IMB-MPI1 benchmarks are in the
-MB_MPJ.mpi1 package and IMB-P2P benchmarks in MB_MPJ.p2p. Run any benchmark
-with -list (or -benchmarks) to print this list.
+### IMB-MPI1 (`MB_MPJ.mpi1`)
 
-1. IMB-MPI1: Single Transfers Benchmarks
-        MB_MPJ.mpi1.PingPong
-        MB_MPJ.mpi1.PingPongAnySource
-        MB_MPJ.mpi1.PingPing
-        MB_MPJ.mpi1.PingPingAnySource
+**Single transfers**
 
-2. IMB-MPI1: Collective Transfers Benchmarks
-        MB_MPJ.mpi1.Allgather
-        MB_MPJ.mpi1.Allgatherv
-        MB_MPJ.mpi1.Alltoall
-        MB_MPJ.mpi1.Alltoallv
-        MB_MPJ.mpi1.Allreduce
-        MB_MPJ.mpi1.Barrier
-        MB_MPJ.mpi1.Bcast
-        MB_MPJ.mpi1.Gather
-        MB_MPJ.mpi1.Gatherv
-        MB_MPJ.mpi1.Reduce
-        MB_MPJ.mpi1.Reduce_scatter
-        MB_MPJ.mpi1.Scatter
-        MB_MPJ.mpi1.Scatterv
+| Class | Description |
+|---|---|
+| `PingPong` | One active pair, sequential send/receive |
+| `PingPongAnySource` | `PingPong` receiving with `MPI.ANY_SOURCE`/`MPI.ANY_TAG` |
+| `PingPing` | One active pair, overlapped non-blocking exchange |
+| `PingPingAnySource` | `PingPing` receiving with `MPI.ANY_SOURCE`/`MPI.ANY_TAG` |
 
-3. IMB-MPI1: Parallel Transfers Benchmarks
-        MB_MPJ.mpi1.Exchange
-        MB_MPJ.mpi1.Sendrecv
-        MB_MPJ.mpi1.Uniband
-        MB_MPJ.mpi1.Biband
+**Collectives**
 
-4. IMB-P2P Benchmarks
-        MB_MPJ.p2p.PingPong
-        MB_MPJ.p2p.PingPing
-        MB_MPJ.p2p.Unirandom
-        MB_MPJ.p2p.Birandom
-        MB_MPJ.p2p.Corandom
-        MB_MPJ.p2p.Stencil2D
-        MB_MPJ.p2p.Stencil3D
-        MB_MPJ.p2p.SendRecv_Replace
+| Class | Description |
+|---|---|
+| `Allgather` | `MPI.BYTE`, all-gather |
+| `Allgatherv` | `MPI.BYTE`, all-gather with variable counts |
+| `Allreduce` | `MPI.FLOAT`, `MPI.SUM` |
+| `Alltoall` | `MPI.BYTE`, all-to-all |
+| `Alltoallv` | `MPI.BYTE`, all-to-all with variable counts |
+| `Barrier` | One iteration per size |
+| `Bcast` | `MPI.BYTE`, broadcast |
+| `Gather` | `MPI.BYTE`, gather |
+| `Gatherv` | `MPI.BYTE`, gather with variable counts |
+| `Reduce` | `MPI.FLOAT`, `MPI.SUM` |
+| `Reduce_scatter` | `MPI.FLOAT`, `MPI.SUM` |
+| `Scatter` | `MPI.BYTE`, scatter |
+| `Scatterv` | `MPI.BYTE`, scatter with variable counts |
 
+**Parallel transfers**
 
-APPENDIX 4: CSV OUTPUT
+| Class | Description |
+|---|---|
+| `Exchange` | Boundary exchange with left and right neighbours (4 messages per iteration) |
+| `Sendrecv` | Periodic chain with `Sendrecv` (2 messages per iteration) |
+| `Uniband` | Paired unidirectional bandwidth with a window of messages in flight |
+| `Biband` | Like `Uniband`, bidirectional in each pair |
 
-All benchmarks accept -csv [file] to write their result table to a CSV file.
-Only rank 0 writes it, with one row per message size. Without a file name, the
-default is the benchmark class name with dots replaced by underscores, for
-example MB_MPJ_mpi1_PingPong.csv. The columns mirror the benchmark table:
+### IMB-P2P (`MB_MPJ.p2p`)
 
-- IMB-MPI1 PingPong/PingPing: size_bytes,repetitions,t_us,mb_per_sec
-- IMB-MPI1 Exchange and Sendrecv:
-  size_bytes,repetitions,t_min_us,t_max_us,t_avg_us,mb_per_sec
-- IMB-MPI1 collective benchmarks without a bandwidth column:
-  size_bytes,repetitions,t_min_us,t_max_us,t_avg_us
-- IMB-MPI1 Barrier: repetitions,t_min_us,t_max_us,t_avg_us
-- IMB-MPI1 Uniband/Biband: size_bytes,repetitions,mb_per_sec,msg_per_sec
-- IMB-P2P PingPong/PingPing and SendRecv_Replace:
-  size_bytes,repetitions,t_us,mb_per_sec,msg_per_sec
-- IMB-P2P random and stencil benchmarks:
-  size_bytes,repetitions,latency_us,mb_per_sec,msg_per_sec
+| Class | Description |
+|---|---|
+| `PingPong` | Every rank in a pair; rank 0 aggregates the timings |
+| `PingPing` | Overlapped variant of `PingPong` |
+| `Unirandom` | Random sender/receiver pair per iteration, one direction |
+| `Birandom` | Random pair per iteration, bidirectional exchange |
+| `Corandom` | Random ring where every rank sends and receives |
+| `Stencil2D` | Periodic 2D grid, 4 neighbours |
+| `Stencil3D` | Periodic 3D grid, 6 neighbours |
+| `SendRecv_Replace` | Periodic chain with `Sendrecv_replace` |
 
-LatencyBench uses a different, raw-sample schema. It runs with exactly 2
-processes. Besides printing latency statistics, it can write the raw
-measurements to a CSV file with -csv:
+### LatencyBench
 
--bash-3.2$ fmpjrun -np 2 -cp $MBMPJ_HOME/target/mbmpj.jar -class MB_MPJ.LatencyBench -csv latency.csv
+`MB_MPJ.LatencyBench` is specific to MB_MPJ. It runs with exactly 2 processes
+and reports mean, minimum, maximum and percentile latencies. With `-csv` it
+also writes every raw sample.
 
-If no file is given, latency_results.csv is used. The CSV columns are:
+## Command-line options
 
-        size_bytes,iteration,latency_us
+The main options use the IMB names and defaults. `All` means every `MicroBench`
+benchmark; `LatencyBench` has its own smaller set, listed afterwards.
 
-The file contains one row per sample, so external tools can compute summary
-statistics and build line, histogram, or box-plot charts from it.
+| Option | Applies to | Default / notes |
+|---|---|---|
+| `-iter <msgspersample[,overall_vol[,msgs_nonaggr]]>` | All | MPI1 `1000,40,100`; P2P `100000,800,100` |
+| `-msgsz <size>` | All | Single message size in bytes (a comma-separated list is also accepted) |
+| `-msgsize <s1,s2,...>` | All | Explicit comma-separated size list |
+| `-msglog <min:max>` | All | Power-of-two range; `0` maps to 1 byte |
+| `-warm_up <on\|off>` | All | MPI1 10% with a minimum of 10; P2P 10% with a minimum of 1 |
+| `-window_size <n>` | `Uniband`, `Biband` | `256` messages in flight |
+| `-csv [file]` | All | Write the result table to CSV (rank 0); `<Class>.csv` by default |
+| `-s`, `-e` | All | Start/end size in bytes (`1`, `4194304`) |
+| `-i`, `-o` | All | Aliases of the two first `-iter` fields; `-o` is in MiB |
+| `-list`, `-benchmarks` | All | Print the benchmark names and exit |
+| `-v` | All | Print the version and exit |
+| `-help` | All | Print the usage message and exit |
+| `-mem <GiB>` | IMB-MPI1 | `1.0` GiB per process |
+| `-time <seconds>` | IMB-MPI1 | `10.0` s per message size |
+| `-sync <on\|off>` | IMB-MPI1 | Barrier after each collective iteration (`on`) |
+| `-root_shift <on\|off>` | IMB-MPI1 | Rotate the root of rooted collectives (`off`) |
+| `-msgwr <on\|off>` | IMB-P2P | Touch send-buffer cache lines (`on`) |
+| `-msgrd <on\|off>` | IMB-P2P | Touch receive-buffer cache lines (`on`) |
+| `-pause <microseconds>` | IMB-P2P | Pause between samples (`100000`) |
 
-FastMPJ note: some FastMPJ installations include lib/mpj-test.jar with old
-MB_MPJ classes. FastMPJ loads that jar before the -cp jar, so make sure it is
-not ahead of the current application jar.
+Notes:
 
+- `-mem` and `-time` are rejected in IMB-P2P benchmarks; `-msgwr`, `-msgrd`
+  and `-pause` are rejected in IMB-MPI1 benchmarks.
+- `-mem` aborts if the maximum buffers would exceed the limit. `-time` may
+  reduce the iterations of a sample that runs too long.
+- `-off_cache` is not implemented and is rejected as an unknown option.
+- The pause and the dissemination barrier used by IMB-P2P are outside the
+  measured interval.
 
-APPENDIX 5: IMB BENCHMARK COVERAGE
+`LatencyBench` accepts a smaller set of options:
 
-MB_MPJ implements the MPI-1.2/1.3 subset of Intel MPI Benchmarks. The
-benchmarks are organised like the IMB suite itself:
+| Option | Default |
+|---|---|
+| `-s <size>` | `1` |
+| `-e <size>` | `4096` |
+| `-i <iterations>` | `20000` |
+| `-w <warmup_iterations>` | `50000` |
+| `-csv [file]` | `latency_results.csv` |
+| `-h` | Print usage |
 
-- MB_MPJ.mpi1: 21 IMB-MPI1 benchmarks (the 17 historical defaults,
-  PingPongAnySource, PingPingAnySource, Uniband and Biband). IMB 2021.12 also
-  includes Reduce_local and Reduce_scatter_block as defaults; see below.
-- MB_MPJ.p2p: 8 IMB-P2P benchmarks (PingPong, PingPing, Unirandom,
-  Birandom, Corandom, Stencil2D, Stencil3D and SendRecv_Replace).
-- MB_MPJ.LatencyBench: an MB_MPJ-specific latency benchmark.
+## Output and CSV
 
-All planned IMB-MPI1 and IMB-P2P benchmarks that are implementable with
-MPI-1.2/1.3 are covered; Reduce_scatter_block was explicitly discarded.
+`Mbytes/sec` columns use decimal megabytes per second (10^6 bytes/s), exactly
+as IMB does; they are not MiB/s. IMB-MPI1 collectives report only
+`t_min`/`t_max`/`t_avg` and have no bandwidth column.
 
-Mbytes/sec columns use decimal megabytes per second (10^6 bytes/s), exactly as
-IMB does; they are not MiB/s. IMB-MPI1 collectives report only t_min/t_max/t_avg
-and have no bandwidth column.
+Every `MicroBench` benchmark accepts `-csv [file]`. Only rank 0 writes, with one
+row per message size and six decimal places. Without a file name, the default is
+the class name with dots replaced by underscores, for example
+`MB_MPJ_mpi1_PingPong.csv`. The columns mirror the stdout table:
 
-The two suites name their point-to-point benchmarks identically but measure
-different things, so each has its own class:
+| Benchmark family | CSV columns |
+|---|---|
+| IMB-MPI1 `PingPong`/`PingPing` | `size_bytes,repetitions,t_us,mb_per_sec` |
+| IMB-MPI1 `Exchange`, `Sendrecv` | `size_bytes,repetitions,t_min_us,t_max_us,t_avg_us,mb_per_sec` |
+| IMB-MPI1 collectives | `size_bytes,repetitions,t_min_us,t_max_us,t_avg_us` |
+| IMB-MPI1 `Barrier` | `repetitions,t_min_us,t_max_us,t_avg_us` |
+| IMB-MPI1 `Uniband`/`Biband` | `size_bytes,repetitions,mb_per_sec,msg_per_sec` |
+| IMB-P2P `PingPong`/`PingPing`/`SendRecv_Replace` | `size_bytes,repetitions,t_us,mb_per_sec,msg_per_sec` |
+| IMB-P2P random and stencil benchmarks | `size_bytes,repetitions,latency_us,mb_per_sec,msg_per_sec` |
 
-- MB_MPJ.mpi1.PingPong and MB_MPJ.mpi1.PingPing follow IMB-MPI1: they use
-  pair0=0 and pair1=nprocess-1 and require at least 2 processes. Any other
-  process stays idle, as in IMB-MPI1, and the reported time is the maximum
-  over the pair.
-- MB_MPJ.p2p.PingPong and MB_MPJ.p2p.PingPing follow IMB-P2P: every process is
-  paired with (rank + nprocess/2) % nprocess, an even number of processes is
-  required, and rank 0 aggregates the timings into the IMB-P2P columns
-  (#bytes #repetitions t[usec] Mbytes/sec Msg/sec).
-- MB_MPJ.p2p.Unirandom, MB_MPJ.p2p.Birandom and MB_MPJ.p2p.Corandom use the
-  same pseudo-random sequence as IMB-P2P, so every rank derives the same pairs
-  or ring without exchanging extra information. Unirandom selects one
-  sender/receiver pair per iteration, Birandom makes that pair exchange in both
-  directions, and Corandom shuffles a ring where every rank sends to the next
-  and receives from the previous. They need at least 2 processes and do not
-  require an even number.
-- MB_MPJ.p2p.Stencil2D and MB_MPJ.p2p.Stencil3D form a periodic 2D or 3D grid.
-  Every process exchanges one message with each of its 4 or 6 neighbours using
-  Irecv/Isend and Waitall. The number of processes must factor into a valid
-  grid, as in IMB-P2P.
-- MB_MPJ.p2p.SendRecv_Replace also follows IMB-P2P but uses a periodic chain:
-  every process sends to (rank + 1) % nprocess and receives from
-  (rank - 1 + nprocess) % nprocess with the same buffer. It needs at least 2
-  processes and does not require an even number.
-- MB_MPJ.mpi1.Uniband and MB_MPJ.mpi1.Biband follow IMB-MPI1: every process is
-  paired with rank + nprocess/2, an even number of processes is required, and
-  each pair moves a window of messages (-window_size, 256 by default) followed
-  by a one-byte ack. Uniband sends in one direction; Biband sends and receives
-  in both. Their output columns are
-  (#bytes #repetitions Mbytes/sec Msg/sec).
+`LatencyBench` uses its own raw-sample schema. One row per sample:
 
-Reduce_local cannot be implemented faithfully because MPI_Reduce_local is not
-part of the mpiJava 1.2 API. Reduce_scatter_block was discarded: it is not
-planned for implementation.
+```text
+size_bytes,iteration,latency_us
+```
 
-The remaining IMB suites require APIs that the mpiJava 1.2 API does not
-expose: IMB-NBC (MPI-3 nonblocking collectives), IMB-RMA and IMB-EXT
-(one-sided), IMB-IO (MPI-IO), IMB-MPI4 (persistent collectives) and IMB-MT
-(threads).
+```bash
+fmpjrun -np 2 -cp "$MBMPJ_HOME/target/mbmpj.jar" \
+  -class MB_MPJ.LatencyBench -csv latency.csv
+```
 
-See docs/IMB_BENCHMARKS.md for the full coverage matrix, the
-per-suite inventory and the implementation roadmap.
+This makes it easy to compute summary statistics or build line, histogram and
+box-plot charts with external tools.
 
+## FastMPJ note
 
-LICENSE:
+Some FastMPJ installations ship `lib/mpj-test.jar` with old `MB_MPJ` classes.
+FastMPJ places that jar before the `-cp` argument, so remove or rename it when
+running the Maven-built jar; otherwise the stale benchmark code is loaded.
 
-MB_MPJ is distributed under the MIT License. See the LICENSE file for the
-full text.
+## IMB coverage
+
+MB_MPJ implements the MPI-1.2/1.3 subset of Intel MPI Benchmarks:
+
+- `MB_MPJ.mpi1`: the 17 historical IMB-MPI1 defaults, the two `AnySource`
+  variants, and `Uniband`/`Biband`.
+- `MB_MPJ.p2p`: all 8 IMB-P2P benchmarks.
+- `MB_MPJ.LatencyBench`: an MB_MPJ-specific latency benchmark.
+
+All planned IMB-MPI1 and IMB-P2P benchmarks that can be implemented with
+MPI-1.2/1.3 are covered. `Reduce_local` is not implementable with the mpiJava
+1.2 API and `Reduce_scatter_block` was explicitly discarded. The remaining IMB
+suites need APIs that mpiJava 1.2 does not expose: IMB-NBC (MPI-3 nonblocking
+collectives), IMB-RMA and IMB-EXT (one-sided), IMB-IO (MPI-IO), IMB-MPI4
+(persistent collectives) and IMB-MT (threads).
+
+See [`docs/IMB_BENCHMARKS.md`](docs/IMB_BENCHMARKS.md) for the full coverage
+matrix, the per-suite inventory and the implementation notes.
+
+## License
+
+MB_MPJ is distributed under the MIT License. See the [`LICENSE`](LICENSE) file
+for the full text.
 
 MB_MPJ is an independent Java reimplementation; it is not affiliated with,
 endorsed by, or sponsored by Intel, and its results are not official
 Intel(R) MPI Benchmarks results. The original Intel MPI Benchmarks sources are
 not included in this repository; they are available upstream at
-https://github.com/intel/mpi-benchmarks and are licensed under the BSD
-3-Clause License. See the `NOTICE` file for the third-party attribution and
-license text.
+<https://github.com/intel/mpi-benchmarks> under the BSD 3-Clause License. See
+the [`NOTICE`](NOTICE) file for the third-party attribution and license text.
