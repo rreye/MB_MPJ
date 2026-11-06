@@ -192,7 +192,7 @@ benchmark; `LatencyBench` has its own smaller set, listed afterwards.
 | `-msgsz <size>` | All | Single message size in bytes (a comma-separated list is also accepted) |
 | `-msgsize <s1,s2,...>` | All | Explicit comma-separated size list |
 | `-msglog <min:max>` | All | Power-of-two range; `0` maps to 1 byte |
-| `-warm_up <on\|off>` | All | MPI1 10% with a minimum of 10; P2P 10% with a minimum of 1 |
+| `-warm_up <on\|off>` | All | At every size: MPI1 10% with a minimum of 10; P2P 10% with a minimum of 1 |
 | `-window_size <n>` | `Uniband`, `Biband` | `256` messages in flight |
 | `-csv [file]` | All | Write the result table to CSV (rank 0); `<Class>.csv` by default |
 | `-s`, `-e` | All | Start/end size in bytes (`1`, `4194304`) |

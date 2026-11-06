@@ -64,7 +64,6 @@ public abstract class MicroBench
 
 	protected int nprocess = -1;
 	protected int rank = -1;
-	protected int warmup_size = 0;
 
 	/* Send (A) and receive (B) buffers */
   	protected Object A = null;
@@ -149,10 +148,10 @@ public abstract class MicroBench
 		return 40;
 	}
 
-	/* IMB-MPI1 warms up once; IMB-P2P warms up for every message size */
+	/* IMB-MPI1 and IMB-P2P warm up for every message size */
 	protected boolean warmUpEachSize()
 	{
-		return false;
+		return true;
 	}
 
 	protected int warmupIterations(int iters)
@@ -267,7 +266,6 @@ public abstract class MicroBench
 
     			this.datatype_size = MicroBench.getDatatypeSizeInBytes(this.datatype);
 	                this.bufferCount = MAX_SIZE/datatype_size;
-        	        this.warmup_size = MIN_SIZE;
 		}
 		catch(Exception e)
 		{
@@ -303,18 +301,6 @@ public abstract class MicroBench
 
 			int[] sizes = messageSizes();
 
-			//WARMUP
-			if(MicroBench.WARM_UP && !this.warmUpEachSize())
-			{
-				int warmupIters = this.warmupIterations(iterationCount(this.warmup_size));
-
-				if(warmupIters > 0)
-				{
-					Benchrun(this.warmup_size, warmupIters);
-					MPI.COMM_WORLD.Barrier();
-				}
-			}
-
 			//BENCHMARK
 	                for (int sizeIndex=0; sizeIndex<sizes.length; sizeIndex++)
         	        {
@@ -334,7 +320,10 @@ public abstract class MicroBench
 					if(warmupIters > 0)
 					{
 						Benchrun(size, warmupIters);
-						this.sampleBarrier();
+
+						/* IMB-P2P synchronizes after warmup; IMB-MPI1 does not. */
+						if(this.customSamplePreparation())
+							this.sampleBarrier();
 					}
 				}
 

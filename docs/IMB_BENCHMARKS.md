@@ -270,9 +270,9 @@ aliases of the existing classes, without duplicating code.
 6. **Stencil grids and buffers**: solved with `MB_MPJ.p2p.StencilBench`. Each
    benchmark computes the grid like IMB and uses one send buffer and one
    receive buffer per neighbour.
-7. **Warmup**: solved with the same IMB rule: MPI1 warms up once with 10% of the
-   iterations of the first size and a minimum of 10; P2P warms up at each size
-   with 10% and a minimum of 1. It is controlled with `-warm_up on|off`.
+7. **Warmup**: solved with the same IMB rule: every suite warms up at each
+   message size. MPI1 uses 10% of that size's iterations with a minimum of 10;
+   P2P uses 10% with a minimum of 1. It is controlled with `-warm_up on|off`.
 8. **Name registration**: the existing benchmarks are listed in
    `MicroBench.printBenchmarksNames()` and in the `README`; new classes must be
    added to both places.

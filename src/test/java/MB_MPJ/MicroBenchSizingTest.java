@@ -7,6 +7,7 @@ package MB_MPJ;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -123,5 +124,11 @@ class MicroBenchSizingTest
 		assertEquals(100, bench.warmupIterations(1000));
 		assertEquals(10, bench.warmupIterations(50));
 		assertEquals(5, bench.warmupIterations(5));
+	}
+
+	@Test
+	void mpi1WarmsUpEachSize()
+	{
+		assertTrue(bench.warmUpEachSize());
 	}
 }
