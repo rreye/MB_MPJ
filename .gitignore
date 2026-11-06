@@ -1,0 +1,17 @@
+# Maven output
+target/
+bin/
+lib/
+*.tgz
+
+# Local development aids (not part of the published repository)
+mpi-benchmarks-IMB-*/
+scripts/
+
+# Benchmark and editor output
+*.csv
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
